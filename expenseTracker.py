@@ -29,6 +29,16 @@ parser_upd.add_argument('--amount', '-t', type=float)
 
 
 args = parser.parse_args()
-if args.cmd != None:
-    print(args)
-    print(args.description, args.amount)
+print(args)
+
+dispatcher = {'add':addExpense, 'del': }
+
+match args.cmd:
+    case 'add':
+        print(args.description, args.amount)
+    case 'del':
+        print(args.id)
+    case 'upd:'
+        if args.description is None and args.amount is None:
+            parser.error('Update: At least one of --description or --amount is required')
+
