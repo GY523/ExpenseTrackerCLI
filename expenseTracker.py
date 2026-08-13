@@ -1,5 +1,42 @@
 import argparse
+import json
+from pathlib import Path
 
+def load_expenses():
+    json.load()
+
+def dump_expenses():
+    json.dump()
+
+def addExpense():
+    return
+
+def delExpense():
+    return
+
+def updExpense():
+    return
+
+def listExpense():
+    return
+
+def summaryExpenses():
+    return
+
+def printAll():
+    print('Summaries all')
+
+def printAllMonths():
+    print('Summaries all months')
+
+def printAllCats():
+    print('Summaries all cats')
+
+def printOneMonth():
+    print('Sum up {} month')
+
+def printOneCat():
+    print('Sum up one category')
 # define the CLI decision flow
 
 # Add the required id on one parser, and then let the one that needs it to inherit it in the parents 
@@ -27,18 +64,53 @@ parser_upd = subparser.add_parser('upd', help='update an expense', parents=[id_p
 parser_upd.add_argument('--description', '-d')
 parser_upd.add_argument('--amount', '-t', type=float)
 
+# list 
+parser_list = subparser.add_parser('list', help='list all expenses',)
+
+# summary 
+parser_summary = subparser.add_parser('summary', help='summary based on categories(default) or month')
+
+# summary: month mutex group
+month_group = parser_summary.add_mutually_exclusive_group()
+month_group.add_argument('-m', '--months', help='gives a summary of all months',
+                         action='store_true')
+month_group.add_argument('--month', help='summaries by specific month', type=int)
+
+# summary: category mutex group
+category_group = parser_summary.add_mutually_exclusive_group()
+category_group.add_argument('-a', '--categories', help='summaries amount on all categories',
+                         action='store_true') #choices=get_all_categories))'
+category_group.add_argument('-c','--category', help='sum up the amount on a given categories')
 
 args = parser.parse_args()
-print(args)
 
-dispatcher = {'add':addExpense, 'del': }
+dispatcher = {'add':addExpense, 'del':delExpense, 'upd':updExpense, 'list':listExpense }
 
 match args.cmd:
     case 'add':
         print(args.description, args.amount)
     case 'del':
         print(args.id)
-    case 'upd:'
+    case 'upd':
         if args.description is None and args.amount is None:
             parser.error('Update: At least one of --description or --amount is required')
+    case 'list':
+        print(args.cmd)
+        #dispatcher[list]()
+    case 'summary':
+        if args.category is None and args.month is None and args.categories is None and args.months is None:
+            print('default: all categories and all months')
+        else:
+            if args.categories:
+                print("all cats")
+            if args.months:
+                print('all months')
+            if args.month and args.category:
+                print('specific month and category')
+            elif args.month:
+                print('specific month')
+            elif args.category:
+                print('specific cat')
+
+
 
