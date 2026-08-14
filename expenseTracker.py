@@ -1,9 +1,21 @@
 import argparse
 import json
 from pathlib import Path
+from datetime import datetime
 
-def load_expenses():
-    json.load()
+def load_expenses(db_file):
+    try:
+        with open(db_file, 'r') as f:
+            expenses = f.read()
+
+        if expenses == '':
+            return {}
+
+        expenses = json.loads(expenses)
+        return expenses
+    
+    except FileExistsError:
+        print(f"Error: the file '{db_file}' was not found.")
 
 def dump_expenses():
     json.dump()
@@ -23,9 +35,6 @@ def listExpense():
 def summaryExpenses():
     return
 
-def printAll():
-    print('Summaries all')
-
 def printAllMonths():
     print('Summaries all months')
 
@@ -37,6 +46,10 @@ def printOneMonth():
 
 def printOneCat():
     print('Sum up one category')
+
+def printOneMonthOneCat():
+    print("Summaries {} expenses in {} month")
+
 # define the CLI decision flow
 
 # Add the required id on one parser, and then let the one that needs it to inherit it in the parents 
@@ -85,6 +98,8 @@ category_group.add_argument('-c','--category', help='sum up the amount on a give
 args = parser.parse_args()
 
 dispatcher = {'add':addExpense, 'del':delExpense, 'upd':updExpense, 'list':listExpense }
+JSON_FILE = Path('expenses.json')
+load_expenses(JSON_FILE)
 
 match args.cmd:
     case 'add':
