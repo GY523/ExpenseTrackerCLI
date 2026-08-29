@@ -5,7 +5,7 @@
    - id: int
    - amount: float
    - description: string
-   - Categories: (tuple)
+   - Category: (tuple)
    - datetime spent: datetime
 
 ## Data Storage
@@ -20,14 +20,14 @@ json file and
 1. User can Add an expense with the description and amount
 
    ```
-   $ expense-tracker add --description "Lunch" --amount 20
+   $ expense-tracker add --description "Lunch" --amount 20 --category Food
    # Expense added successfully (ID: 1)
    ```
 
 2. User can Update the response. 
 
    ```
-   $ expense-tracker upd --id 2 --description "Dinner" --amount 10
+   $ expense-tracker upd --id 2 --description "Dinner" --amount 10 --category Food
    # Expense added successfully (ID: 2)
    ```
 
@@ -68,4 +68,11 @@ json file and
    # Total expenses for August: $20
    ```
 
-   
+7. User can view all categories
+
+   ```
+   $ expense-tracker categories
+   # Food
+   # Entertainment
+   # General
+   ```

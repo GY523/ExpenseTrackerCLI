@@ -7,7 +7,9 @@
 3. User can delete a response.
 4. User can view all responses.
 5. User can view a summary of all expenses.
-6. User can view a summary of expenses for a specific month.
+6. User can view a summary of expenses for a specific month
+7. User can view a summary of expenses of every category.
+
 
 ## Implementation
 1. Use any programming language for any available module for parsing command arguments (e.g. python with the argparse, node.js with commander etc).
@@ -19,8 +21,6 @@
 
 ## constraint added by myself
 Implement simple OOP, It's not to solve a complex problem, but to familiarise by creating a class.
-
-
 
 ## Additional features
 1. Add categories and filter by category.
