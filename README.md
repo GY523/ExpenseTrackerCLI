@@ -3,9 +3,9 @@
 ## Functional Requirements
 
 1. User can Add an expense with the description and amount
-2. User can Update the response. 
-3. User can delete a response.
-4. User can view all responses.
+2. User can Update the expenses. 
+3. User can delete a expenses.
+4. User can view all expenses.
 5. User can view a summary of all expenses.
 6. User can view a summary of expenses for a specific month
 7. User can view a summary of expenses of every category.

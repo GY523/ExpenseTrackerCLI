@@ -24,9 +24,6 @@ def summaryExpenses():
     
     return
 
-def printAll():
-    print('Summaries all')
-
 def printAllMonths():
     print('Summaries all months')
 
@@ -38,6 +35,10 @@ def printOneMonth():
 
 def printOneCat():
     print('Sum up one category')
+
+def printOneMonthOneCat():
+    print("Summaries {} expenses in {} month")
+
 '''
 # define the CLI decision flow
 
