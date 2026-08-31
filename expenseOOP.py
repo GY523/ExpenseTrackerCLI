@@ -23,7 +23,7 @@ class Category:
         )
 
 class Expense:
-    def __init__(self, id, desc, amount, datetime, category=Category('General')):
+    def __init__(self, id: int, desc:str , amount:float, datetime: dt.datetime, category=Category('General')):
         self.id = id 
         self.description = desc
         self.amount = amount
@@ -35,11 +35,12 @@ class Expense:
 
     def to_dict(self):
         return {
-            "id":self.id ,
-            "description": self.description,
-            "amount": self.amount,
-            "datetime": self.datetime,
-            "category": self.category.to_dict()
+            f'{self.id}': {
+                "description": self.description,
+                "amount": self.amount,
+                "datetime": self.datetime,
+                "category": self.category.to_dict()
+            }
         }
 
     @classmethod
@@ -79,15 +80,26 @@ class ExpenseManager:
         self.expenses = expense_list
         self.categories = cat_list
         self.storage = storage
+        self.expense_index = {}
+        self.next_new_id = 1
+        self.load_data()
 
-    def load(self):
+    def load_data(self):
         data = self.storage.load()
 
         # extract expenses from dictionary
         self.expenses = [ Expense.from_dict(e) for e in data.get('expenses', []) ]
         self.categories = [Category.from_dict(c) for c in data.get("categories", []) ]
 
-    def save(self):
+        # construct an index for better time efficiency in delete and update
+        self.expense_index = {expense.id : expense for expense in self.expenses}
+
+        # update next id
+        # the condition checks on the list before operation
+        if self.expenses:
+            self.next_new_id = max(self.expense_index.keys()) + 1
+
+    def save_data(self):
         expenses_dict = [ Expense.to_dict(e) for e in self.expenses]
         categories_dict = [ Category.to_dict(c) for c in self.categories]
 
@@ -98,7 +110,45 @@ class ExpenseManager:
         self.storage.save(data)
         
     def add_expenses(self, description: str, amount:float, category:Category=Category('General') ):
+        '''Add a new expense to the database'''
+
+        # Take the id of the last element + 1 to return the new id 
+        new_expense = Expense(self.next_new_id, description, amount, dt.datetime.now(), category)
+
+        # Remember to Update index ! ( for any changes to the expenses list )
+        self.expenses.append(new_expense)
+        self.expense_index[self.next_new_id] = new_expense
+
+        # increase the next new id by one
+        self.next_new_id += 1
+
+        # save to json file automatically
+        self.save_data()
+        return new_expense.id
+
+    def del_expense(self, id: int): # Easy to Forgive than to Ask for Permission (EFAP:easy forgive ask permission)
+        '''Delete an expense based on ID value given'''
+        expense = self.expenses.get(id, None)
+        if not expense:
+            raise Exception('Expense with id not found')
+        else:
+            # Delete from self.expenses and update index
+            # self.expenses.remove(expense)
+            del self.expense[id]
+            del self.expense_index[id]        
+
+    def upd_expense(self):
         ...
+
+    # think about how I want to represent these data.
+    '''
+    print one, print summary, print by categories, print by month
+    id, description, amount, datetime, category
+    think about meaningful and common filter based on each of these values.
+    '''
+    def list_expenses(self):
+        ...
+
 
 class Cli:
     def __init__(self, expenseManager, parser):
