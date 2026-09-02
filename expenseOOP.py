@@ -109,7 +109,7 @@ class ExpenseManager:
         }
         self.storage.save(data)
         
-    def add_expenses(self, description: str, amount:float, category:Category=Category('General') ):
+    def add_expenses(self, description: str, amount:float, category:Category=Category('General') ) -> int:
         '''Add a new expense to the database'''
 
         # Take the id of the last element + 1 to return the new id 
@@ -130,15 +130,32 @@ class ExpenseManager:
         '''Delete an expense based on ID value given'''
         expense = self.expenses.get(id, None)
         if not expense:
-            raise Exception('Expense with id not found')
+            raise ValueError(f'Expense with id:{id} not found')
         else:
             # Delete from self.expenses and update index
             # self.expenses.remove(expense)
             del self.expense[id]
             del self.expense_index[id]        
 
-    def upd_expense(self):
-        ...
+    def upd_expense(self, id:int, arg_dict:dict):
+        '''Update expense based on ID value, at least one field (description, amount, datetime) has to be given.'''
+        #if not (new_description or new_amount or new_datetime):
+        #    raise ValueError('at')
+        try:
+            chosen_expense = self.expense_index[id]
+            for attribute,value in arg_dict.items():
+                match attribute:
+                    case 'description':
+                        chosen_expense.description = value
+                    case 'amount':
+                        chosen_expense.amount = value
+                    case 'datetime':
+                        chosen_expense.datetime = value
+            
+        except IndexError:
+            raise IndexError(f'Expense with id:{id} not found')
+        
+
 
     # think about how I want to represent these data.
     '''
@@ -163,8 +180,18 @@ class Cli:
             case 'del':
                 print(args.id)
             case 'upd':
-                if args.description is None and args.amount is None:
-                    parser.error('Update: At least one of --description or --amount is required')
+                if not (args.description or args.amount or args.datetime): # when all not given, error will be thrown
+                    parser.error('Update: At least one of --description or --amount or --datetime is required')
+                else:
+                    arguments={}
+                    if args.description:
+                        arguments['description']=args.description
+                    if args.amount:
+                        arguments['amount'] = args.amount
+                    if args.datetime:
+                        arguments['datetime'] = args.datetime
+                    self.manager.upd_expense(arguments)
+
             case 'list':
                 print(args.cmd)
                 #dispatcher[list]()
