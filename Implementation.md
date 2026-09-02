@@ -76,3 +76,16 @@ json file and
    # Entertainment
    # General
    ```
+
+# OOP Implementation
+
+![UML Diagram](UML%20Diagram.png)
+
+## Detail on updates logic
+
+User -> arg Parser instance -> CLI instance -> ExpenseManager instance
+
+- Arg Parser ensures the id is given
+- CLI instance ensures that at least one argument is given, then pass dictionary to ExpenseManager.update()
+- ExpenseManager takes whatever arguments that are in the dictionary to update, if dictionary is empty do nothing.
+- This is because CLI controls the logic, while the ExpenseManager manages the list of expenses.
