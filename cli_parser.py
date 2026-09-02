@@ -62,10 +62,11 @@ parser_del = subparser.add_parser('del', help='delete an expense', parents=[id_p
 # parser_del.add_argument('--id', '-i', help='id of the expense to be deleted',
 #                        required=True)
 
-# To allow users update either the description or amount or both, it is enforce in the dispatcher logic
+# To allow users update any of the field, at least one has to be given it is enforce in the dispatcher logic
 parser_upd = subparser.add_parser('upd', help='update an expense', parents=[id_parser])
 parser_upd.add_argument('--description', '-d')
-parser_upd.add_argument('--amount', '-t', type=float)
+parser_upd.add_argument('--amount', '-a', type=float)
+parser_upd.add_argument('--datetime', '-t', help='datetime string in format of DD/MM/YYYY')
 
 # list 
 parser_list = subparser.add_parser('list', help='list all expenses',)
