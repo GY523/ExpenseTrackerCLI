@@ -4,6 +4,14 @@ import datetime as dt
 from cli_parser import parser
 from abc import ABC, abstractmethod
 
+class ExpenseError(Exception):
+    pass
+
+class ExpenseNotFoundError(ExpenseError):
+    def __init__(self, id:int):
+        self.expense_id = id
+        super().__init__(f"Expense with ID:{id} not found.")
+
 class Category:
     def __init__(self, name):
         self.name = name
@@ -35,7 +43,8 @@ class Expense:
 
     def to_dict(self):
         return {
-            f'{self.id}': {
+            {
+                "id": self.id,
                 "description": self.description,
                 "amount": self.amount,
                 "datetime": self.datetime,
@@ -128,34 +137,33 @@ class ExpenseManager:
 
     def del_expense(self, id: int): # Easy to Forgive than to Ask for Permission (EFAP:easy forgive ask permission)
         '''Delete an expense based on ID value given'''
-        expense = self.expenses.get(id, None)
-        if not expense:
-            raise ValueError(f'Expense with id:{id} not found')
-        else:
-            # Delete from self.expenses and update index
-            # self.expenses.remove(expense)
-            del self.expense[id]
-            del self.expense_index[id]        
+        try:
+            expense = self.expenses[id]
+        except KeyError as exc:
+            # Exception Chaining
+            raise ExpenseNotFoundError(id) from exc
+        
+        # Delete from self.expenses and update index
+        # self.expenses.remove(expense)
+        del self.expense[id]
+        del self.expense_index[id]        
 
     def upd_expense(self, id:int, arg_dict:dict):
         '''Update expense based on ID value, at least one field (description, amount, datetime) has to be given.'''
-        #if not (new_description or new_amount or new_datetime):
-        #    raise ValueError('at')
-        try:
-            chosen_expense = self.expense_index[id]
-            for attribute,value in arg_dict.items():
-                match attribute:
-                    case 'description':
-                        chosen_expense.description = value
-                    case 'amount':
-                        chosen_expense.amount = value
-                    case 'datetime':
-                        chosen_expense.datetime = value
-            
-        except IndexError:
-            raise IndexError(f'Expense with id:{id} not found')
-        
 
+        try:
+            chosen_expense = self.expense_index[id]            
+        except KeyError as exc:
+            raise ExpenseNotFoundError(id) from exc
+
+        for attribute,value in arg_dict.items():
+            match attribute:
+                case 'description':
+                    chosen_expense.description = value
+                case 'amount':
+                    chosen_expense.amount = value
+                case 'datetime':
+                    chosen_expense.datetime = value
 
     # think about how I want to represent these data.
     '''
@@ -163,8 +171,126 @@ class ExpenseManager:
     id, description, amount, datetime, category
     think about meaningful and common filter based on each of these values.
     '''
-    def list_expenses(self):
+
+    def print_expenses_by_filter(self, category_list:list=[], month_list:list=[dt.date.now().month]):
+        '''print expense in tabular form, if no argument different, it will print all in current month'''
+        if not category_list:
+            category_list = [cat.name for cat in self.categories]
+
+        space_per_column = 10
+        column_sep = "|"    
+        month_mapping = ['','Jan','Feb','Mac', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        month_list_in_words = [month_mapping[x] for x in month_list]
+        
+        # center the header
+        month_header_list = list(map(str.center(space_per_column), month_list_in_words))
+        # add empty corner
+        month_header_list.insert(0, "")
+        month_header_str = column_sep + f"{column_sep}".join(month_header_list) + column_sep + "\n"
+
+        table_line = "=" + "=" * (space_per_column + 1) + "\n"
+        table_header = ""
+        table_header += table_line
+        table_header += month_header_str 
+        table_header += table_line
+        table_data = ""
+
+        # calculate the sum of the categories in months in the list
+        # traverse each expenses
+        category_to_monthly_total = {}
+        for cat in category_list:
+            # ex: cat = 'food'
+            expenses_in_cat = [expense for expense in self.expenses if expense.category == cat]
+            total_monthly_list = []
+            for month in month_list:
+                # ex: Jan
+                amount_list = [expense.amount for expense in expenses_in_cat if expense.datetime.month == month]
+                total_monthly = sum(amount_list)
+                total_monthly_list.append(total_monthly) 
+            category_to_monthly_total.update({cat: total_monthly_list})
+            #[[Jan total monthly, Feb total monthly] //food category
+            # [Jan ...., Feb ...]] // category 2
+            
+
+        # Now we got [234, 23.4, 334.2]
+        # Construct table from the data.
+        for cat in category_list:
+            cat_str = cat.center(space_per_column)
+            table_body += column_sep + cat_str + column_sep
+            for total_monthly in category_to_monthly_total[cat]:
+                table_body += str(total_monthly) + column_sep 
+
+            table_body += '\n'
+
+        print(table_header + table_body)
+    
+    # do print summary first as it is part of the requirement
+    def list_sum_of_expenses(self, args_dict: dict[str,list] ):
+        # decompose the value
+        # both can be empty
+        category_list = args_dict.get('category_list',[])
+        month_list = args_dict.get('month_list', [])
+        try:
+            # convert the value
+            if not (month_list or month_list[0])=='all':
+                month_list = [int(x) for x in month_list]
+        except ValueError as e:
+            print(f"Please give month value as integer from 1 to 12")
+
+        all_categories = [ cat.name for cat in self.categories]
+        all_months = list(range(1,13))
+        # print out base on the month and category values given
+        if not (category_list or month_list):
+            # both list are empty: print default: all categories and current month
+            self.print_expenses_by_filter()
+        else:
+            # if category list is empty or first item is 'all'   
+            if not category_list or (len(category_list)==1 and category_list[0]== 'all'):
+                
+                # category_list not empty, is month_list empty, definitely month is not empty, structurally unreachable
+                if not month_list:
+                    # ['all'], None
+                    self.print_expenses_by_filter(all_categories)
+                elif month_list and month_list[0]=='all':
+                    # [['all'],['all']]
+                    self.print_expenses_by_filter(all_categories, all_months)                
+                else:
+                    # [['all'], [month1 | month1,month2,month...]]
+                    self.print_expenses_by_filter(all_categories, month_list=month_list)
+
+            # the category is not empty and first 1 element is not 'all'
+            else:
+                # month list is empty: print current month
+                if not month_list:
+                    # [cat2,cat3] , []
+                    self.print_expenses_by_filter(category_list)
+                elif len(month_list)==1 and month_list[0]== 'all':
+                    # [[cat1 | cat1,cat2,...], ['all']]
+                    self.print_expenses_by_filter(category_list, all_months)
+                else:
+                    # [cat1,cat2], [1,2,3,4] 
+                    self.print_expenses_by_filter(category_list, month_list)
+                
+    def list_detail_of_expenses(self, arg_list: list[str]):
         ...
+    # Sum
+    # it could actually be based on values given as category and as month, 
+    # Range of category: None - list of values, Range of month: None - list of values (max 12 or )
+    # print total amount by a category
+    # print total amount by each of the categories
+    # print total amount of a month, default: current month
+    # print total amount of each of the months
+    # print total amount by a category in a month
+    # print total amount by a category in each of the months
+    # print total amount of each of the categories in a month 
+    # print total amount of each of the categories in each of the months
+
+    '''
+    Further improvement: make a bar/line graph
+    make a gui to filter by (category, categories, month, months, and the combination of them)
+    one category in a month, one category in many months, many categories in a month, many categories in many months.
+    '''
+
 
 
 class Cli:
@@ -183,18 +309,43 @@ class Cli:
                 if not (args.description or args.amount or args.datetime): # when all not given, error will be thrown
                     parser.error('Update: At least one of --description or --amount or --datetime is required')
                 else:
-                    arguments={}
+                    args_dict={}
                     if args.description:
-                        arguments['description']=args.description
+                        args_dict['description']=args.description
                     if args.amount:
-                        arguments['amount'] = args.amount
+                        args_dict['amount'] = args.amount
                     if args.datetime:
-                        arguments['datetime'] = args.datetime
-                    self.manager.upd_expense(arguments)
+                        args_dict['datetime'] = args.datetime
+                    self.manager.upd_expense(args_dict)
 
             case 'list':
+                # Check values of categories and month, CLI responsible for validation, and put it in appropriate format for function to read in 
+                # Range of values of Categor
                 print(args.cmd)
-                #dispatcher[list]()
+                print(args)
+
+                # Initialize the arguments in case both are None
+                args_dict = {}
+
+                # sanitize category argument
+                if args.category:
+                    category_list = args.category.split(',')
+                    category_list = [cat.strip() for cat in category_list]
+                    args_dict.update({"category_list":category_list})
+                    # ['cat1','cat2] | ['all']
+                if args.month:
+                    month_list = args.month.split(',')
+                    month_list = [month.strip() for month in month_list]
+                    args_dict.update({"month_list": month_list})
+                    # ['1','2',] | ['all']
+
+                # call the function
+                try:
+                    self.manager.list_sum_of_expenses(args_dict)
+                except ValueError:
+                    ...
+                
+
             case 'summary':
                 if args.category is None and args.month is None and args.categories is None and args.months is None:
                     print('default: all categories and all months')
@@ -210,5 +361,9 @@ class Cli:
                     elif args.category:
                         print('specific cat')
 
-app = Cli(0, parser)
+json_file = Path.cwd() / "expenses.json"
+json_storage = JSONStorage(json_file)
+exp_manager = ExpenseManager(json_storage)
+app = Cli(exp_manager, parser)
+
 app.run()
