@@ -69,12 +69,14 @@ parser_upd.add_argument('--amount', '-a', type=float)
 parser_upd.add_argument('--datetime', '-t', help='datetime string in format of DD/MM/YYYY')
 
 # list 
-parser_list = subparser.add_parser('list', help='list all expenses',)
+parser_list = subparser.add_parser('list', help='list all expenses')
+parser_list.add_argument('--category','-c', help='category filter, format: category1 | "category1,category2,..." | all ' )
+parser_list.add_argument('--month', '-m', help='month filter, number is used here, format: month1 | "1,2,3,..." | all')
 
 # summary 
-parser_summary = subparser.add_parser('summary', help='summary based on categories(default) or month')
+#parser_summary = subparser.add_parser('summary', help='summary based on categories(default) or month')
 
-# summary: month mutex group
+""" # summary: month mutex group
 month_group = parser_summary.add_mutually_exclusive_group()
 month_group.add_argument('-m', '--months', help='gives a summary of all months',
                          action='store_true')
@@ -85,7 +87,7 @@ category_group = parser_summary.add_mutually_exclusive_group()
 category_group.add_argument('-a', '--categories', help='summaries amount on all categories',
                          action='store_true') #choices=get_all_categories))'
 category_group.add_argument('-c','--category', help='sum up the amount on a given categories')
-
+ """
 
 if __name__ =='__main__':
     args = parser.parse_args()
