@@ -47,11 +47,15 @@ def printOneMonthOneCat():
 id_parser = argparse.ArgumentParser(add_help=False)
 id_parser.add_argument('id', help='Expense ID', type=int)
 
+# for subparser that accepts category
+category_parser = argparse.ArgumentParser(add_help=False)
+category_parser.add_argument('--category', '-c', help="category the expense belongs to",)
+
 # main parser
 parser = argparse.ArgumentParser()
 subparser = parser.add_subparsers(dest='cmd') #title="CRUD operations", help="for the common create, read, update, delete operations.")
 
-parser_add = subparser.add_parser('add', help="add an expense.")
+parser_add = subparser.add_parser('add', help="add an expense.", parents=[category_parser])
 parser_add.add_argument('--description', '-d', help="description of the expense.",
                         required=True)
 parser_add.add_argument('--amount', '-t', help='total of the expense',
@@ -63,7 +67,7 @@ parser_del = subparser.add_parser('del', help='delete an expense', parents=[id_p
 #                        required=True)
 
 # To allow users update any of the field, at least one has to be given it is enforce in the dispatcher logic
-parser_upd = subparser.add_parser('upd', help='update an expense', parents=[id_parser])
+parser_upd = subparser.add_parser('upd', help='update an expense', parents=[id_parser, category_parser])
 parser_upd.add_argument('--description', '-d')
 parser_upd.add_argument('--amount', '-a', type=float)
 parser_upd.add_argument('--datetime', '-t', help='datetime string in format of DD/MM/YYYY')
