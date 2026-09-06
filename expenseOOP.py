@@ -10,7 +10,7 @@ class ExpenseError(Exception):
 class ExpenseNotFoundError(ExpenseError):
     def __init__(self, id:int):
         self.expense_id = id
-        super().__init__(f"Expense with ID:{id} not found.")
+        super().__init__(f"Expense (ID:{id}) not found.")
 
 class Category:
     def __init__(self, name):
@@ -31,25 +31,31 @@ class Category:
         )
 
 class Expense:
+    dt_format = '%d/%m/%Y, %H:%M:%S'
+
     def __init__(self, id: int, desc:str , amount:float, datetime: dt.datetime, category=Category('General')):
         self.id = id 
         self.description = desc
         self.amount = amount
         self.datetime = datetime
         self.category = category
+        
+    def __eq__(self, value):
+        if self.id == value.id:
+            return True
+        else:
+            return False
 
     def __str__(self):
-        return f"{self.id},{self.description},{self.amount},{self.category}"
+        return f"{self.id},{self.description},{self.amount},{self.datetime.strftime(self.dt_format)},{self.category.name}"
 
     def to_dict(self):
         return {
-            {
-                "id": self.id,
-                "description": self.description,
-                "amount": self.amount,
-                "datetime": self.datetime,
-                "category": self.category.to_dict()
-            }
+            "id": self.id,
+            "description": self.description,
+            "amount": self.amount,
+            "datetime": self.datetime.strftime(Expense.dt_format),
+            "category": self.category.to_dict()
         }
 
     @classmethod
@@ -58,7 +64,7 @@ class Expense:
             id = data.get('id',-1),
             desc = data.get('description',""),
             amount = data.get('amount', -1),
-            datetime = data.get('datetime', None),
+            datetime = dt.datetime.strptime(data.get('datetime', ""), cls.dt_format),
             category = Category.from_dict(data.get('category',{}))
         )
 
@@ -81,7 +87,7 @@ class JSONStorage(Storage):
 
     def save(self, data:dict) -> None:
         with open(self.file_path, 'w') as f:
-            json.dump(data,f)
+            json.dump(data,f, indent=4)
 
 
 class ExpenseManager:
@@ -118,15 +124,20 @@ class ExpenseManager:
         }
         self.storage.save(data)
         
-    def add_expenses(self, description: str, amount:float, category:Category=Category('General') ) -> int:
+    def add_expense(self, description: str, amount:float, category:str='general' ) -> int:
         '''Add a new expense to the database'''
 
         # Take the id of the last element + 1 to return the new id 
-        new_expense = Expense(self.next_new_id, description, amount, dt.datetime.now(), category)
+        category_inst = Category(category)
+        new_expense = Expense(self.next_new_id, description, amount, dt.datetime.now(), category_inst)
 
         # Remember to Update index ! ( for any changes to the expenses list )
         self.expenses.append(new_expense)
         self.expense_index[self.next_new_id] = new_expense
+
+        # Update Categories also: only store if unique
+        if category not in [cat.name for cat in self.categories]:
+            self.categories.append(category_inst)
 
         # increase the next new id by one
         self.next_new_id += 1
@@ -135,26 +146,27 @@ class ExpenseManager:
         self.save_data()
         return new_expense.id
 
-    def del_expense(self, id: int): # Easy to Forgive than to Ask for Permission (EFAP:easy forgive ask permission)
+    def del_expense(self, e_id: int): # Easy to Forgive than to Ask for Permission (EFAP:easy forgive ask permission)
         '''Delete an expense based on ID value given'''
         try:
-            expense = self.expenses[id]
+            expense = self.expense_index[e_id]
         except KeyError as exc:
             # Exception Chaining
-            raise ExpenseNotFoundError(id) from exc
-        
+            raise ExpenseNotFoundError(e_id) from exc
         # Delete from self.expenses and update index
-        # self.expenses.remove(expense)
-        del self.expense[id]
-        del self.expense_index[id]        
 
-    def upd_expense(self, id:int, arg_dict:dict):
+        self.expenses.remove(expense)
+        del self.expense_index[e_id]
+
+        self.save_data()
+
+    def upd_expense(self, e_id:int, arg_dict:dict):
         '''Update expense based on ID value, at least one field (description, amount, datetime) has to be given.'''
 
         try:
-            chosen_expense = self.expense_index[id]            
+            chosen_expense = self.expense_index[e_id]            
         except KeyError as exc:
-            raise ExpenseNotFoundError(id) from exc
+            raise ExpenseNotFoundError(e_id) from exc
 
         for attribute,value in arg_dict.items():
             match attribute:
@@ -163,7 +175,9 @@ class ExpenseManager:
                 case 'amount':
                     chosen_expense.amount = value
                 case 'datetime':
-                    chosen_expense.datetime = value
+                    chosen_expense.datetime.strptime(value, Expense.dt_format)
+                case 'category':
+                    chosen_expense.category.name = value
 
     # think about how I want to represent these data.
     '''
@@ -172,35 +186,37 @@ class ExpenseManager:
     think about meaningful and common filter based on each of these values.
     '''
 
-    def print_expenses_by_filter(self, category_list:list=[], month_list:list=[dt.date.now().month]):
+    def print_expenses_by_filter(self, category_list:list=[], month_list:list=[dt.date.today().month]):
         '''print expense in tabular form, if no argument different, it will print all in current month'''
+
         if not category_list:
             category_list = [cat.name for cat in self.categories]
 
         space_per_column = 10
+        cat_column_space = max([len(cat) for cat in category_list])
         column_sep = "|"    
         month_mapping = ['','Jan','Feb','Mac', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        month_list_in_words = [month_mapping[x] for x in month_list]
-        
-        # center the header
-        month_header_list = list(map(str.center(space_per_column), month_list_in_words))
-        # add empty corner
-        month_header_list.insert(0, "")
-        month_header_str = column_sep + f"{column_sep}".join(month_header_list) + column_sep + "\n"
+        month_list_in_words = [month_mapping[int(x)] for x in month_list]
 
-        table_line = "=" + "=" * (space_per_column + 1) + "\n"
+        # center the header
+        month_header_list = list(map(lambda month: month.center(space_per_column), month_list_in_words))
+
+        # add one empty column for category column
+        month_header_str = column_sep + " " * cat_column_space + column_sep + f"{column_sep}".join(month_header_list) + column_sep + "\n"
+
+        table_line = "=" * (cat_column_space + 2 ) + "=" * (space_per_column + 1) * len(month_header_list) + "\n"
         table_header = ""
         table_header += table_line
         table_header += month_header_str 
         table_header += table_line
-        table_data = ""
+        table_body = ""
 
         # calculate the sum of the categories in months in the list
         # traverse each expenses
         category_to_monthly_total = {}
         for cat in category_list:
             # ex: cat = 'food'
-            expenses_in_cat = [expense for expense in self.expenses if expense.category == cat]
+            expenses_in_cat = [expense for expense in self.expenses if expense.category.name == cat]
             total_monthly_list = []
             for month in month_list:
                 # ex: Jan
@@ -210,17 +226,19 @@ class ExpenseManager:
             category_to_monthly_total.update({cat: total_monthly_list})
             #[[Jan total monthly, Feb total monthly] //food category
             # [Jan ...., Feb ...]] // category 2
-            
+        
 
         # Now we got [234, 23.4, 334.2]
         # Construct table from the data.
         for cat in category_list:
-            cat_str = cat.center(space_per_column)
+            cat_str = cat.center(cat_column_space)
             table_body += column_sep + cat_str + column_sep
             for total_monthly in category_to_monthly_total[cat]:
-                table_body += str(total_monthly) + column_sep 
+                table_body += str(total_monthly).center(space_per_column) + column_sep 
 
             table_body += '\n'
+
+        table_body += table_line
 
         print(table_header + table_body)
     
@@ -230,12 +248,6 @@ class ExpenseManager:
         # both can be empty
         category_list = args_dict.get('category_list',[])
         month_list = args_dict.get('month_list', [])
-        try:
-            # convert the value
-            if not (month_list or month_list[0])=='all':
-                month_list = [int(x) for x in month_list]
-        except ValueError as e:
-            print(f"Please give month value as integer from 1 to 12")
 
         all_categories = [ cat.name for cat in self.categories]
         all_months = list(range(1,13))
@@ -294,7 +306,7 @@ class ExpenseManager:
 
 
 class Cli:
-    def __init__(self, expenseManager, parser):
+    def __init__(self, expenseManager: ExpenseManager, parser):
         self.manager = expenseManager
         self.parser = parser
 
@@ -302,12 +314,23 @@ class Cli:
         args = self.parser.parse_args()
         match args.cmd:
             case 'add':
-                print(args.description, args.amount)
+                
+                # call add method
+                if args.category:
+                    id = self.manager.add_expense(args.description, args.amount,args.category)
+                else:
+                    id = self.manager.add_expense(args.description, args.amount,)
+                print(f"Expense record (ID:{id}) created: ({args.description}, {args.amount}) .")
             case 'del':
-                print(args.id)
+                try:
+                    self.manager.del_expense(args.id)
+                except ExpenseNotFoundError as e:
+                    print(e)
+                else:
+                    print(f"Expense record (ID:{args.id}) has been deleted succesfully.")
             case 'upd':
-                if not (args.description or args.amount or args.datetime): # when all not given, error will be thrown
-                    parser.error('Update: At least one of --description or --amount or --datetime is required')
+                if not (args.description or args.amount or args.datetime or args.category): # when all not given, error will be thrown
+                    parser.error('Update: At least one of --description or --amount or --datetime or --category is required')
                 else:
                     args_dict={}
                     if args.description:
@@ -316,7 +339,14 @@ class Cli:
                         args_dict['amount'] = args.amount
                     if args.datetime:
                         args_dict['datetime'] = args.datetime
-                    self.manager.upd_expense(args_dict)
+                    if args.category:
+                        args_dict['category'] = args.category
+                try:
+                    self.manager.upd_expense(args.id, args_dict)
+                except ExpenseNotFoundError as e:
+                    print(e)
+                else:
+                    print(f'Expense (ID:{args.id}) updated successfully')
 
             case 'list':
                 # Check values of categories and month, CLI responsible for validation, and put it in appropriate format for function to read in 
