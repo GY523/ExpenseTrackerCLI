@@ -1,0 +1,48 @@
+{
+    "expenses": [
+        {
+            "id": 1,
+            "description": "dinner egg fried rice",
+            "amount": 12.0,
+            "datetime": "06/09/2026, 21:54:48",
+            "category": {
+                "name": "general"
+            }
+        },
+        {
+            "id": 2,
+            "description": "lunch chicken rice, liang teh and haojian",
+            "amount": 16.5,
+            "datetime": "06/09/2026, 21:57:24",
+            "category": {
+                "name": "general"
+            }
+        },
+        {
+            "id": 3,
+            "description": "shore dinner",
+            "amount": 20.0,
+            "datetime": "06/09/2026, 22:14:47",
+            "category": {
+                "name": "general"
+            }
+        },
+        {
+            "id": 4,
+            "description": "lunch chicken rice, liang teh and haojian",
+            "amount": 16.5,
+            "datetime": "06/09/2026, 22:24:02",
+            "category": {
+                "name": "car park"
+            }
+        }
+    ],
+    "categories": [
+        {
+            "name": "general"
+        },
+        {
+            "name": "car park"
+        }
+    ]
+}
