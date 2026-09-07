@@ -185,34 +185,8 @@ class ExpenseManager:
     id, description, amount, datetime, category
     think about meaningful and common filter based on each of these values.
     '''
-
-    def print_expenses_by_filter(self, category_list:list=[], month_list:list=[dt.date.today().month]):
-        '''print expense in tabular form, if no argument different, it will print all in current month'''
-
-        if not category_list:
-            category_list = [cat.name for cat in self.categories]
-
-        space_per_column = 10
-        cat_column_space = max([len(cat) for cat in category_list])
-        column_sep = "|"    
-        month_mapping = ['','Jan','Feb','Mac', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-        month_list_in_words = [month_mapping[int(x)] for x in month_list]
-
-        # center the header
-        month_header_list = list(map(lambda month: month.center(space_per_column), month_list_in_words))
-
-        # add one empty column for category column
-        month_header_str = column_sep + " " * cat_column_space + column_sep + f"{column_sep}".join(month_header_list) + column_sep + "\n"
-
-        table_line = "=" * (cat_column_space + 2 ) + "=" * (space_per_column + 1) * len(month_header_list) + "\n"
-        table_header = ""
-        table_header += table_line
-        table_header += month_header_str 
-        table_header += table_line
-        table_body = ""
-
-        # calculate the sum of the categories in months in the list
-        # traverse each expenses
+    def sum_per_month_per_category(self, category_list:list[str], month_list:list[int]) -> dict[str,list[float]]:
+        """Calculate the sum of the categories in months in the list"""
         category_to_monthly_total = {}
         for cat in category_list:
             # ex: cat = 'food'
@@ -226,21 +200,67 @@ class ExpenseManager:
             category_to_monthly_total.update({cat: total_monthly_list})
             #[[Jan total monthly, Feb total monthly] //food category
             # [Jan ...., Feb ...]] // category 2
-        
+        return category_to_monthly_total
 
-        # Now we got [234, 23.4, 334.2]
-        # Construct table from the data.
-        for cat in category_list:
-            cat_str = cat.center(cat_column_space)
-            table_body += column_sep + cat_str + column_sep
-            for total_monthly in category_to_monthly_total[cat]:
-                table_body += str(total_monthly).center(space_per_column) + column_sep 
+    def format_to_table(self, headers:list, data:dict[str,list], rows:list=[]) -> str:
+        """return the string in table format, given headers and data, rows is optional."""
+        space_per_column = 10 
+        first_column_space = max([len(cat) for cat in rows]) + 2
+        column_sep = "|"
+        row_sep = '='
+        empty_first_cell = column_sep + " " * first_column_space
+        headers_list = list(map(lambda h: h.center(space_per_column), headers))
 
-            table_body += '\n'
+        if rows:
+            headers_str     = empty_first_cell + column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
+        else:
+            headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
 
-        table_body += table_line
+        table_line      = row_sep * (len(headers_str) -1 ) + "\n"
+        table_header = ""
+        table_header += table_line
+        table_header += headers_str
+        table_header += table_line
+        table_body = ""
 
-        print(table_header + table_body)
+        if rows:
+            for row in rows:
+                row_str = row.center(first_column_space)
+                table_body += column_sep + row_str + column_sep
+                for d in data[row]:
+                    table_body += str(d).center(space_per_column) + column_sep 
+
+                table_body += '\n'
+
+            table_body += table_line
+        else:
+            # print for expense: { e_id: [ id, desc, amount, dt, category]}
+            table_body += column_sep
+            for lst in data.values():
+                for value in lst:
+                    table_body += str(value).center(space_per_column) + column_sep
+                table_body += "\n"
+
+            table_body += table_line
+
+        return table_header + table_body
+    
+    def print_expenses_by_filter():
+        ...
+
+    def print_sum_by_filter(self, category_list:list=[], month_list:list=[dt.date.today().month]):
+        '''print expense in tabular form, if no argument different, it will print the total of a category in current month'''
+
+        if not category_list:
+            category_list = [cat.name for cat in self.categories]
+
+        # Calculate total per month per category
+        category_to_monthly_total = self.sum_per_month_per_category(category_list, month_list)
+
+        month_mapping = ['','Jan','Feb','Mac', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        month_list_in_words = [month_mapping[int(x)] for x in month_list]
+        table = self.format_to_table(month_list_in_words, category_to_monthly_total, category_list)
+        print(table)
     
     # do print summary first as it is part of the requirement
     def list_sum_of_expenses(self, args_dict: dict[str,list] ):
@@ -254,7 +274,7 @@ class ExpenseManager:
         # print out base on the month and category values given
         if not (category_list or month_list):
             # both list are empty: print default: all categories and current month
-            self.print_expenses_by_filter()
+            self.print_sum_by_filter()
         else:
             # if category list is empty or first item is 'all'   
             if not category_list or (len(category_list)==1 and category_list[0]== 'all'):
@@ -262,26 +282,26 @@ class ExpenseManager:
                 # category_list not empty, is month_list empty, definitely month is not empty, structurally unreachable
                 if not month_list:
                     # ['all'], None
-                    self.print_expenses_by_filter(all_categories)
+                    self.print_sum_by_filter(all_categories)
                 elif month_list and month_list[0]=='all':
                     # [['all'],['all']]
-                    self.print_expenses_by_filter(all_categories, all_months)                
+                    self.print_sum_by_filter(all_categories, all_months)                
                 else:
                     # [['all'], [month1 | month1,month2,month...]]
-                    self.print_expenses_by_filter(all_categories, month_list=month_list)
+                    self.print_sum_by_filter(all_categories, month_list=month_list)
 
             # the category is not empty and first 1 element is not 'all'
             else:
                 # month list is empty: print current month
                 if not month_list:
                     # [cat2,cat3] , []
-                    self.print_expenses_by_filter(category_list)
+                    self.print_sum_by_filter(category_list)
                 elif len(month_list)==1 and month_list[0]== 'all':
                     # [[cat1 | cat1,cat2,...], ['all']]
-                    self.print_expenses_by_filter(category_list, all_months)
+                    self.print_sum_by_filter(category_list, all_months)
                 else:
                     # [cat1,cat2], [1,2,3,4] 
-                    self.print_expenses_by_filter(category_list, month_list)
+                    self.print_sum_by_filter(category_list, month_list)
                 
     def list_detail_of_expenses(self, arg_list: list[str]):
         ...

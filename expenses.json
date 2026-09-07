@@ -35,6 +35,15 @@
             "category": {
                 "name": "car park"
             }
+        },
+        {
+            "id": 5,
+            "description": "lunch",
+            "amount": 7.8,
+            "datetime": "07/09/2026, 20:48:09",
+            "category": {
+                "name": "food"
+            }
         }
     ],
     "categories": [
@@ -43,6 +52,9 @@
         },
         {
             "name": "car park"
+        },
+        {
+            "name": "food"
         }
     ]
 }
