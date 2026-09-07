@@ -185,6 +185,9 @@ class ExpenseManager:
     id, description, amount, datetime, category
     think about meaningful and common filter based on each of these values.
     '''
+    def filter_expenses(self, category_list:list[str], month_list:list[int]) -> list[list,list]:
+        ...
+
     def sum_per_month_per_category(self, category_list:list[str], month_list:list[int]) -> dict[str,list[float]]:
         """Calculate the sum of the categories in months in the list"""
         category_to_monthly_total = {}
@@ -205,13 +208,14 @@ class ExpenseManager:
     def format_to_table(self, headers:list, data:dict[str,list], rows:list=[]) -> str:
         """return the string in table format, given headers and data, rows is optional."""
         space_per_column = 10 
-        first_column_space = max([len(cat) for cat in rows]) + 2
         column_sep = "|"
         row_sep = '='
-        empty_first_cell = column_sep + " " * first_column_space
+        
         headers_list = list(map(lambda h: h.center(space_per_column), headers))
 
         if rows:
+            first_column_space = max([len(cat) for cat in rows]) + 2
+            empty_first_cell = column_sep + " " * first_column_space
             headers_str     = empty_first_cell + column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
         else:
             headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
@@ -236,17 +240,40 @@ class ExpenseManager:
         else:
             # print for expense: { e_id: [ id, desc, amount, dt, category]}
             table_body += column_sep
-            for lst in data.values():
-                for value in lst:
+            
+            for expense_dict in data.values():
+                # data.values : list[dict]
+                for value in expense_dict.values():
                     table_body += str(value).center(space_per_column) + column_sep
                 table_body += "\n"
 
             table_body += table_line
-
+        
         return table_header + table_body
     
-    def print_expenses_by_filter():
-        ...
+    def print_expenses_by_filter(self, category_list:list=[], month_list:list=[dt.date.today().month]):
+        '''print out filtered expenses in detail.'''
+
+        if not category_list:
+            category_list = [cat.name for cat in self.categories]
+
+        # filter operation: traverse through every expense in the list
+        list_of_filter_expenses=[]
+        for cat in category_list:
+            expenses_in_cat_in_month = [ exp.to_dict() for exp in self.expenses if exp.category.name == cat and exp.datetime.month in month_list]
+            list_of_filter_expenses.extend(expenses_in_cat_in_month)
+
+        # restucture the expense like {key:[]}
+
+        expenses_in_cat_in_month_dict = {}
+        for i, expense in enumerate(list_of_filter_expenses):
+            expenses_in_cat_in_month_dict.update({i: expense})
+
+        headers = expenses_in_cat_in_month[0].keys()
+        table = self.format_to_table(headers, expenses_in_cat_in_month_dict)
+
+        print(table)
+               
 
     def print_sum_by_filter(self, category_list:list=[], month_list:list=[dt.date.today().month]):
         '''print expense in tabular form, if no argument different, it will print the total of a category in current month'''
@@ -370,30 +397,32 @@ class Cli:
 
             case 'list':
                 # Check values of categories and month, CLI responsible for validation, and put it in appropriate format for function to read in 
-                # Range of values of Categor
-                print(args.cmd)
-                print(args)
+                # print(args.cmd)
 
                 # Initialize the arguments in case both are None
                 args_dict = {}
+                if args.detail==True:
+                    # print details of every expenses
+                    self.manager.print_expenses_by_filter()
+                else:
 
-                # sanitize category argument
-                if args.category:
-                    category_list = args.category.split(',')
-                    category_list = [cat.strip() for cat in category_list]
-                    args_dict.update({"category_list":category_list})
-                    # ['cat1','cat2] | ['all']
-                if args.month:
-                    month_list = args.month.split(',')
-                    month_list = [month.strip() for month in month_list]
-                    args_dict.update({"month_list": month_list})
-                    # ['1','2',] | ['all']
+                    # sanitize category argument
+                    if args.category:
+                        category_list = args.category.split(',')
+                        category_list = [cat.strip() for cat in category_list]
+                        args_dict.update({"category_list":category_list})
+                        # ['cat1','cat2] | ['all']
+                    if args.month:
+                        month_list = args.month.split(',')
+                        month_list = [month.strip() for month in month_list]
+                        args_dict.update({"month_list": month_list})
+                        # ['1','2',] | ['all']
 
-                # call the function
-                try:
-                    self.manager.list_sum_of_expenses(args_dict)
-                except ValueError:
-                    ...
+                    # call the function
+                    try:
+                        self.manager.list_sum_of_expenses(args_dict)
+                    except ValueError:
+                        ...
                 
 
             case 'summary':
