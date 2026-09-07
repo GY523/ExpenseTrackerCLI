@@ -73,10 +73,10 @@ parser_upd.add_argument('--amount', '-a', type=float)
 parser_upd.add_argument('--datetime', '-t', help='datetime string in format of DD/MM/YYYY')
 
 # list 
-parser_list = subparser.add_parser('list', help='list all expenses')
+parser_list = subparser.add_parser('list', help='list filtered expenses in summary, by default list the total per category in the current month')
 parser_list.add_argument('--category','-c', help='category filter, format: category1 | "category1,category2,..." | all ' )
 parser_list.add_argument('--month', '-m', help='month filter, number is used here, format: month1 | "1,2,3,..." | all')
-
+parser_list.add_argument('--detail', '-l', help="list filtered expenses in detail", action="store_true")
 # summary 
 #parser_summary = subparser.add_parser('summary', help='summary based on categories(default) or month')
 
