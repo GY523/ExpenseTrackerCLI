@@ -58,7 +58,7 @@ subparser = parser.add_subparsers(dest='cmd') #title="CRUD operations", help="fo
 parser_add = subparser.add_parser('add', help="add an expense.", parents=[category_parser])
 parser_add.add_argument('--description', '-d', help="description of the expense.",
                         required=True)
-parser_add.add_argument('--amount', '-t', help='total of the expense',
+parser_add.add_argument('--amount', '-a', help='total of the expense',
                         required=True, type=float)
 
 # parser for del (inherit id_parser)
