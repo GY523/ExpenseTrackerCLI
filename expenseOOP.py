@@ -240,11 +240,19 @@ class ExpenseManager:
         else:
             # print for expense: { e_id: [ id, desc, amount, dt, category]}
             table_body += column_sep
-            
-            for expense_dict in data.values():
-                # data.values : list[dict]
-                for value in expense_dict.values():
-                    table_body += str(value).center(space_per_column) + column_sep
+            value_list_2d = list(data.values())
+
+            column_spaces = []
+            # calculate the length of each column 
+            for i, value_list in enumerate(value_list_2d):
+                 
+                column_spaces.append(max())
+            value_list_2d = []
+            for i, value_list in enumerate(value_list_2d):
+                for value in value_list:
+                    # [id,desc,amount,dt,]
+                    column_space = max([ len(x) for x in value ]) + 2
+                    table_body += value.center(column_space) + column_sep
                 table_body += "\n"
 
             table_body += table_line
@@ -260,16 +268,19 @@ class ExpenseManager:
         # filter operation: traverse through every expense in the list
         list_of_filter_expenses=[]
         for cat in category_list:
-            expenses_in_cat_in_month = [ exp.to_dict() for exp in self.expenses if exp.category.name == cat and exp.datetime.month in month_list]
-            list_of_filter_expenses.extend(expenses_in_cat_in_month)
-
-        # restucture the expense like {key:[]}
+            for exp in self.expenses:
+                if exp.category.name == cat and exp.datetime.month in month_list:
+                    exp_in_dict = exp.to_dict()
+                    list_of_filter_expenses.append(list(exp_in_dict.values()))
+        # [ [id, desc,amount, dt, cat], [id...]]    
+        # restucture the expense like {id:[id, desc, ...]}
 
         expenses_in_cat_in_month_dict = {}
         for i, expense in enumerate(list_of_filter_expenses):
             expenses_in_cat_in_month_dict.update({i: expense})
+        print(expenses_in_cat_in_month_dict)
 
-        headers = expenses_in_cat_in_month[0].keys()
+        headers = list(self.expenses[0].keys())
         table = self.format_to_table(headers, expenses_in_cat_in_month_dict)
 
         print(table)
