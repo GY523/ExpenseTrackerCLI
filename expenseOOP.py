@@ -213,21 +213,21 @@ class ExpenseManager:
         
         headers_list = list(map(lambda h: h.center(space_per_column), headers))
 
+        headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
+
+        table_line = ''
+        table_header = ''
+        table_body = ""
+
+
         if rows:
             first_column_space = max([len(cat) for cat in rows]) + 2
             empty_first_cell = column_sep + " " * first_column_space
             headers_str     = empty_first_cell + column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
-        else:
-            headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
-
-        table_line      = row_sep * (len(headers_str) -1 ) + "\n"
-        table_header = ""
-        table_header += table_line
-        table_header += headers_str
-        table_header += table_line
-        table_body = ""
-
-        if rows:
+            table_line   += row_sep * (len(headers_str) -1 ) + "\n"
+            table_header += table_line
+            table_header += headers_str
+            table_header += table_line
             for row in rows:
                 row_str = row.center(first_column_space)
                 table_body += column_sep + row_str + column_sep
@@ -238,20 +238,33 @@ class ExpenseManager:
 
             table_body += table_line
         else:
+
             # print for expense: { e_id: [ id, desc, amount, dt, category]}
-            table_body += column_sep
             value_list_2d = list(data.values())
+            value_list_2d = [[str(y) for y in x] for x in value_list_2d]
 
             column_spaces = []
             # calculate the length of each column 
             for i, value_list in enumerate(value_list_2d):
-                 
-                column_spaces.append(max())
-            value_list_2d = []
+                i_column = [len(x[i]) for x in value_list_2d]
+
+                # append max length of the element
+                column_spaces.append(max(i_column))
+
+            table_line = row_sep * (sum(column_spaces) + len(value_list)*3 + 1) + '\n'
+            # construct header str
+            headers_list = [head.center(column_spaces[i]+2) for i, head in enumerate(headers)]
+            headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
+
+            table_header += table_line
+            table_header += headers_str
+            table_header += table_line
+
             for i, value_list in enumerate(value_list_2d):
-                for value in value_list:
+                table_body += column_sep
+                for j, value in enumerate(value_list):
                     # [id,desc,amount,dt,]
-                    column_space = max([ len(x) for x in value ]) + 2
+                    column_space = column_spaces[j] + 2
                     table_body += value.center(column_space) + column_sep
                 table_body += "\n"
 
@@ -278,9 +291,8 @@ class ExpenseManager:
         expenses_in_cat_in_month_dict = {}
         for i, expense in enumerate(list_of_filter_expenses):
             expenses_in_cat_in_month_dict.update({i: expense})
-        print(expenses_in_cat_in_month_dict)
 
-        headers = list(self.expenses[0].keys())
+        headers = list(self.expenses[0].to_dict().keys())
         table = self.format_to_table(headers, expenses_in_cat_in_month_dict)
 
         print(table)
