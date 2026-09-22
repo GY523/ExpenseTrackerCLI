@@ -12,6 +12,14 @@ class ExpenseNotFoundError(ExpenseError):
         self.expense_id = id
         super().__init__(f"Expense (ID:{id}) not found.")
 
+class ExpenseFilteredNotFoundError(ExpenseError):
+    def __init__(self):
+        super().__init__(f"No Expenses in the given filter")
+
+class InputMonthError(ExpenseError):
+    def __init__(self):
+        super().__init__(f"Please give month in integer and in following format: mth1,mth2,mth3")
+
 class Category:
     def __init__(self, name):
         self.name = name
@@ -240,18 +248,22 @@ class ExpenseManager:
         else:
 
             # print for expense: { e_id: [ id, desc, amount, dt, category]}
+            # data: required argument 
             value_list_2d = list(data.values())
             value_list_2d = [[str(y) for y in x] for x in value_list_2d]
 
             column_spaces = []
-            # calculate the length of each column 
-            for i, value_list in enumerate(value_list_2d):
+            # calculate the maximum length for each column 
+            for i, header in enumerate(headers):
                 i_column = [len(x[i]) for x in value_list_2d]
-
+                i_column.append(len(header))
                 # append max length of the element
                 column_spaces.append(max(i_column))
-
-            table_line = row_sep * (sum(column_spaces) + len(value_list)*3 + 1) + '\n'
+            try:
+                table_line = row_sep * (sum(column_spaces) + len(value_list_2d[0])*3 + 1) + '\n'
+            except IndexError as exc:
+                raise ExpenseFilteredNotFoundError() from exc
+            
             # construct header str
             headers_list = [head.center(column_spaces[i]+2) for i, head in enumerate(headers)]
             headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
@@ -293,10 +305,12 @@ class ExpenseManager:
             expenses_in_cat_in_month_dict.update({i: expense})
 
         headers = list(self.expenses[0].to_dict().keys())
-        table = self.format_to_table(headers, expenses_in_cat_in_month_dict)
-
-        print(table)
-               
+        try:
+            table = self.format_to_table(headers, expenses_in_cat_in_month_dict)
+        except ExpenseFilteredNotFoundError as e:
+            print(e)
+        else:
+            print(table)   
 
     def print_sum_by_filter(self, category_list:list=[], month_list:list=[dt.date.today().month]):
         '''print expense in tabular form, if no argument different, it will print the total of a category in current month'''
@@ -380,6 +394,16 @@ class Cli:
         self.manager = expenseManager
         self.parser = parser
 
+    def sanitize_input_month(self, months):
+        month_list = months.split(',')
+        month_list = [month.strip() for month in month_list]
+        try: 
+            month_list = [int(mth) for mth in month_list ]
+        except ValueError as e:
+            raise InputMonthError from e
+
+        return month_list
+
     def run(self):
         args = self.parser.parse_args()
         match args.cmd:
@@ -425,10 +449,32 @@ class Cli:
                 # Initialize the arguments in case both are None
                 args_dict = {}
                 if args.detail==True:
-                    # print details of every expenses
-                    self.manager.print_expenses_by_filter()
-                else:
+                    
+                    if args.category and args.month:
+                        category_list = args.category.split(',')
+                        category_list = [cat.strip() for cat in category_list]
+                        try: 
+                            month_list = self.sanitize_input_month(args.month)
+                        except InputMonthError as e:
+                            print(e)
+                        else:
+                            self.manager.print_expenses_by_filter(category_list, month_list)
+                    elif args.category:
+                        category_list = args.category.split(',')
+                        category_list = [cat.strip() for cat in category_list]
+                        self.manager.print_expenses_by_filter(category_list)
+                    elif args.month:
+                        try: 
+                            month_list = self.sanitize_input_month(args.month)
+                        except InputMonthError as e:
+                            print(e)
+                        else:
+                            self.manager.print_expenses_by_filter(month_list=month_list)
+                    else:
+                        # print details of every expenses
+                        self.manager.print_expenses_by_filter()
 
+                else:
                     # sanitize category argument
                     if args.category:
                         category_list = args.category.split(',')
@@ -436,17 +482,15 @@ class Cli:
                         args_dict.update({"category_list":category_list})
                         # ['cat1','cat2] | ['all']
                     if args.month:
-                        month_list = args.month.split(',')
-                        month_list = [month.strip() for month in month_list]
-                        args_dict.update({"month_list": month_list})
-                        # ['1','2',] | ['all']
-
-                    # call the function
-                    try:
-                        self.manager.list_sum_of_expenses(args_dict)
-                    except ValueError:
-                        ...
-                
+                        try: 
+                            month_list = self.sanitize_input_month(args.month)
+                        except InputMonthError as e:
+                            print(e)
+                        else:
+                            args_dict.update({"month_list": month_list})
+                            # ['1','2',] | ['all']
+                            # call the function
+                            self.manager.list_sum_of_expenses(args_dict)                
 
             case 'summary':
                 if args.category is None and args.month is None and args.categories is None and args.months is None:
