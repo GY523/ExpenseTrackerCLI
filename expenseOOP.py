@@ -215,36 +215,45 @@ class ExpenseManager:
 
     def format_to_table(self, headers:list, data:dict[str,list], rows:list=[]) -> str:
         """return the string in table format, given headers and data, rows is optional."""
-        space_per_column = 10 
+        # Parameters for formatting
+        #space_per_column = 10 
         column_sep = "|"
         row_sep = '='
         
-        headers_list = list(map(lambda h: h.center(space_per_column), headers))
-
-        headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
-
-        table_line = ''
         table_header = ''
         table_body = ""
-
+        table_footer = ""
 
         if rows:
-            first_column_space = max([len(cat) for cat in rows]) + 2
-            empty_first_cell = column_sep + " " * first_column_space
-            headers_str     = empty_first_cell + column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
-            table_line   += row_sep * (len(headers_str) -1 ) + "\n"
-            table_header += table_line
-            table_header += headers_str
-            table_header += table_line
-            for row in rows:
-                row_str = row.center(first_column_space)
-                table_body += column_sep + row_str + column_sep
-                for d in data[row]:
-                    table_body += str(d).center(space_per_column) + column_sep 
+
+            # Preprocess the data: Headers and body 
+            columns_with_category = [[category] + data[category] for category in rows]
+            columns_with_category = [[str(y) for y in x ] for x in columns_with_category]
+            aligned_headers = [""] + headers
+            # [list[list[string]]]
+
+            column_spaces = []
+            for i, header in enumerate(aligned_headers):
+                length_of_i_column = [len(column[i]) for column in columns_with_category]
+                length_of_i_column.append(len(header))
+                column_spaces.append(max(length_of_i_column) + 2)
+
+            headers_list = [header.center(column_spaces[i]) for i, header in enumerate(aligned_headers)]
+            headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
+            try:
+                table_line = row_sep * (sum(column_spaces) + len(columns_with_category[0])*1 + 1) + '\n'
+            except IndexError as exc:
+                raise ExpenseFilteredNotFoundError() from exc
+            
+            for j, category in enumerate(rows):
+                
+                #row_str = category.center(first_column_space)
+                table_body += column_sep #+ row_str + column_sep
+                for i, data in enumerate(columns_with_category[j]):
+                    table_body += str(data).center(column_spaces[i]) + column_sep
 
                 table_body += '\n'
 
-            table_body += table_line
         else:
 
             # print for expense: { e_id: [ id, desc, amount, dt, category]}
@@ -253,12 +262,14 @@ class ExpenseManager:
             value_list_2d = [[str(y) for y in x] for x in value_list_2d]
 
             column_spaces = []
+
             # calculate the maximum length for each column 
             for i, header in enumerate(headers):
                 i_column = [len(x[i]) for x in value_list_2d]
                 i_column.append(len(header))
                 # append max length of the element
                 column_spaces.append(max(i_column))
+
             try:
                 table_line = row_sep * (sum(column_spaces) + len(value_list_2d[0])*3 + 1) + '\n'
             except IndexError as exc:
@@ -268,10 +279,6 @@ class ExpenseManager:
             headers_list = [head.center(column_spaces[i]+2) for i, head in enumerate(headers)]
             headers_str     = column_sep + f"{column_sep}".join(headers_list) + column_sep + "\n"
 
-            table_header += table_line
-            table_header += headers_str
-            table_header += table_line
-
             for i, value_list in enumerate(value_list_2d):
                 table_body += column_sep
                 for j, value in enumerate(value_list):
@@ -280,9 +287,13 @@ class ExpenseManager:
                     table_body += value.center(column_space) + column_sep
                 table_body += "\n"
 
-            table_body += table_line
-        
-        return table_header + table_body
+        table_header += table_line
+        table_header += headers_str
+        table_header += table_line
+        table_body += table_line
+
+        return table_header + table_body + table_footer
+
     
     def print_expenses_by_filter(self, category_list:list=[], month_list:list=[dt.date.today().month]):
         '''print out filtered expenses in detail.'''
@@ -486,11 +497,8 @@ class Cli:
                             month_list = self.sanitize_input_month(args.month)
                         except InputMonthError as e:
                             print(e)
-                        else:
-                            args_dict.update({"month_list": month_list})
-                            # ['1','2',] | ['all']
-                            # call the function
-                            self.manager.list_sum_of_expenses(args_dict)                
+                            return
+                    self.manager.list_sum_of_expenses(args_dict)
 
             case 'summary':
                 if args.category is None and args.month is None and args.categories is None and args.months is None:
