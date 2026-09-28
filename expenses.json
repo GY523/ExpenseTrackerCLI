@@ -28,19 +28,28 @@
             }
         },
         {
-            "id": 4,
-            "description": "lunch chicken rice, liang teh and haojian",
-            "amount": 16.5,
-            "datetime": "06/09/2026, 22:24:02",
-            "category": {
-                "name": "car park"
-            }
-        },
-        {
             "id": 5,
             "description": "lunch",
             "amount": 7.8,
             "datetime": "07/09/2026, 20:48:09",
+            "category": {
+                "name": "food"
+            }
+        },
+        {
+            "id": 6,
+            "description": "thai village lunch",
+            "amount": 7.6,
+            "datetime": "28/09/2026, 17:30:18",
+            "category": {
+                "name": "food"
+            }
+        },
+        {
+            "id": 7,
+            "description": "coffee bean otr",
+            "amount": 13.6,
+            "datetime": "28/09/2026, 17:30:54",
             "category": {
                 "name": "food"
             }

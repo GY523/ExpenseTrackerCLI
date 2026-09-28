@@ -186,6 +186,7 @@ class ExpenseManager:
                     chosen_expense.datetime.strptime(value, Expense.dt_format)
                 case 'category':
                     chosen_expense.category.name = value
+        self.save_data()
 
     # think about how I want to represent these data.
     '''
