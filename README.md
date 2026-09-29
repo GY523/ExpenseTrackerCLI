@@ -1,5 +1,7 @@
 # Expense Tracker CLI
 
+This is a small python project where I follow along on [python projects roadmap](https://roadmap.sh/projects/expense-tracker)
+
 ## Functional Requirements
 
 1. User can Add an expense with the description and amount
